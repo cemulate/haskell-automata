@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, GADTSyntax #-}
+{-# LANGUAGE GADTs, GADTSyntax, NamedFieldPuns #-}
 
 module NFAe where
 
@@ -17,9 +17,9 @@ data NFAeDef s a where
               } -> NFAeDef s a
 
 -- Given set of states, calculate the epsilon-closure (iteratively take all e-moves until the result stops changing)
-eClosure :: (Ord s) => NFAeDef s a -> Set s -> Set s
-eClosure d init = iterateUntilStable length init eFlood where
-    eFlood ss = union ss (ss >>= \s -> (trans d) s Nothing) -- Union the set with all the e-moves from every state in the set
+eClosure :: NFAeDef s a -> Set s -> Set s
+eClosure NFAeDef{trans} init = iterateUntilStable length init eFlood where
+    eFlood ss = union ss (ss >>= \s -> trans s Nothing) -- Union the set with all the e-moves from every state in the set
 
 runNFAe :: NFAeDef s a -> [a] -> Bool
 runNFAe d@(NFAeDef _ _ trans start final) input = any (`member` final) $ do

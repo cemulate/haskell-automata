@@ -1,4 +1,4 @@
-{-# LANGUAGE GADTs, GADTSyntax #-}
+{-# LANGUAGE GADTs, GADTSyntax, NamedFieldPuns #-}
 
 module PDA where
 
@@ -8,7 +8,8 @@ import Data.Set.Monad as S
 import EpsilonUtil
 
 data PDADef s a b where
-    PDADef :: { states :: Set s
+    PDADef :: (Ord s, Ord b) =>
+              { states :: Set s
               , alphabet :: Set a
               , stackAlphabet :: Set b
               , trans :: s -> Maybe a -> b -> Set (s, [b])
@@ -26,12 +27,12 @@ prefixWithStack :: (Ord s, Ord b) => [b] -> Set (s, [b]) -> Set (Snapshot s b)
 prefixWithStack stack actions = S.map (\(s, push) -> (s, push ++ stack)) actions
 
 -- Given set of snapshots, calculate the epsilon-closure
-eClosure :: (Ord s, Ord b) => PDADef s a b -> Set (Snapshot s b) -> Set (Snapshot s b)
-eClosure d init = iterateUntilStable length init eFlood where
+eClosure :: PDADef s a b -> Set (Snapshot s b) -> Set (Snapshot s b)
+eClosure PDADef{trans} init = iterateUntilStable length init eFlood where
     eFlood ss = union ss (ss >>= next)       -- union the set with all the possible e-moves from every snapshot in the set
     next (s, []) = empty
     -- Do the e-moves, and perform the stack action of each result
-    next (s, (h:st)) = let results = (trans d) s Nothing h in prefixWithStack st results
+    next (s, (h:st)) = let results = trans s Nothing h in prefixWithStack st results
 
 runPDAFinal :: (Ord s, Ord b) => PDADef s a b -> [a] -> Bool
 runPDAFinal d@(PDADef _ _ _ trans start stackStart final) input = accept $ do
